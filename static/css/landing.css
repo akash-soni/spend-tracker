@@ -222,6 +222,74 @@
 /* Responsive                                                          */
 /* ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------ */
+/* Demo modal                                                          */
+/* ------------------------------------------------------------------ */
+
+.demo-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+}
+
+.demo-modal-overlay[hidden] { display: none; }
+
+.demo-modal-box {
+    position: relative;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    width: 100%;
+    max-width: 860px;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+}
+
+.demo-modal-close {
+    position: absolute;
+    top: 0.65rem;
+    right: 0.75rem;
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.demo-modal-close:hover { background: rgba(255, 255, 255, 0.3); }
+
+.demo-modal-video {
+    position: relative;
+    padding-bottom: 56.25%; /* 16:9 */
+    height: 0;
+}
+
+.demo-modal-video iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+}
+
+/* ------------------------------------------------------------------ */
+/* Responsive                                                          */
+/* ------------------------------------------------------------------ */
+
 @media (max-width: 600px) {
     .lstat-row { grid-template-columns: 1fr; }
     .lstat-card + .lstat-card {

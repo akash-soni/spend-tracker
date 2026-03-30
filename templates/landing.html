@@ -24,7 +24,7 @@
         </p>
         <div class="lhero-btns">
             <a href="{{ url_for('register') }}" class="btn-lhero">Create free account</a>
-            <a href="{{ url_for('login') }}" class="btn-lhero">See how it works</a>
+            <button type="button" class="btn-lhero" id="open-demo-modal">See how it works</button>
         </div>
     </div>
 
@@ -98,4 +98,57 @@
     </div>
 </section>
 
+<!-- Demo modal -->
+<div id="demo-modal" class="demo-modal-overlay" aria-modal="true" role="dialog" aria-label="Product demo video" hidden>
+    <div class="demo-modal-box">
+        <button class="demo-modal-close" id="close-demo-modal" aria-label="Close">&times;</button>
+        <div class="demo-modal-video">
+            <iframe
+                id="demo-iframe"
+                src=""
+                data-src="https://www.youtube.com/embed/dQw4w9WgXcQ?enablejsapi=1"
+                title="Spendly demo"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen>
+            </iframe>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const overlay  = document.getElementById('demo-modal');
+    const iframe   = document.getElementById('demo-iframe');
+    const openBtn  = document.getElementById('open-demo-modal');
+    const closeBtn = document.getElementById('close-demo-modal');
+
+    function openModal() {
+        iframe.src = iframe.dataset.src;   // load video only on open
+        overlay.hidden = false;
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+        iframe.src = '';                   // stops playback immediately
+        overlay.hidden = true;
+        document.body.style.overflow = '';
+    }
+
+    openBtn.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+
+    // Close on backdrop click (not on the modal box itself)
+    overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) closeModal();
+    });
+
+    // Close on Escape key
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !overlay.hidden) closeModal();
+    });
+}());
+</script>
 {% endblock %}
