@@ -20,7 +20,7 @@
             </a>
             <div class="nav-links">
                 {% if current_user %}
-                <span class="nav-username">{{ current_user["name"] }}</span>
+                <a href="{{ url_for('profile') }}" class="nav-profile">{{ current_user["name"] }}</a>
                 <a href="{{ url_for('logout') }}">Sign out</a>
                 {% else %}
                 <a href="{{ url_for('login') }}">Sign in</a>
@@ -43,6 +43,7 @@
         </div>
     </footer>
 
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
