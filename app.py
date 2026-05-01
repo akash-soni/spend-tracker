@@ -2,6 +2,7 @@ from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from database.db import get_db, init_db, seed_db, get_user_by_email, get_user_by_id
+from database.queries import get_summary_stats, get_recent_transactions, get_category_breakdown
 
 app = Flask(__name__)
 app.secret_key = "dev-secret-key-change-before-production"  # TODO: use env var in production
@@ -107,45 +108,15 @@ def profile():
         return redirect(url_for("login"))
 
     user_id = session["user_id"]
-    conn = get_db()
 
-    user_row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-
-    total_spent = conn.execute(
-        "SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE user_id = ?",
-        (user_id,),
-    ).fetchone()[0]
-
-    tx_count = conn.execute(
-        "SELECT COUNT(*) FROM expenses WHERE user_id = ?",
-        (user_id,),
-    ).fetchone()[0]
-
-    top_cat_row = conn.execute(
-        "SELECT category FROM expenses WHERE user_id = ? GROUP BY category ORDER BY SUM(amount) DESC LIMIT 1",
-        (user_id,),
-    ).fetchone()
-
-    tx_rows = conn.execute(
-        "SELECT date, description, category, amount FROM expenses WHERE user_id = ? ORDER BY date DESC LIMIT 10",
-        (user_id,),
-    ).fetchall()
-
-    cat_rows = conn.execute(
-        "SELECT category, SUM(amount) AS total FROM expenses WHERE user_id = ? GROUP BY category ORDER BY total DESC",
-        (user_id,),
-    ).fetchall()
-
-    conn.close()
-
+    user_row = get_user_by_id(user_id)
     name = user_row["name"]
     initials = "".join(w[0].upper() for w in name.split()[:2])
     created_at = user_row["created_at"] or ""
     try:
-        member_since = datetime.strptime(created_at[:10], "%Y-%m-%d").strftime("%d %b %Y")
+        member_since = datetime.strptime(created_at[:10], "%Y-%m-%d").strftime("%B %Y")
     except ValueError:
         member_since = "—"
-
     user = {
         "name": name,
         "email": user_row["email"],
@@ -153,34 +124,14 @@ def profile():
         "initials": initials,
     }
 
-    stats = {
-        "total_spent": f"₹{total_spent:,.2f}",
-        "transaction_count": tx_count,
-        "top_category": top_cat_row[0] if top_cat_row else "—",
-    }
+    # SA2: get_summary_stats wired here
+    stats = get_summary_stats(user_id)
 
-    transactions = []
-    for tx in tx_rows:
-        try:
-            date_fmt = datetime.strptime(tx["date"], "%Y-%m-%d").strftime("%d %b %Y")
-        except ValueError:
-            date_fmt = tx["date"]
-        transactions.append({
-            "date": date_fmt,
-            "description": tx["description"] or "—",
-            "category": tx["category"],
-            "amount": f"₹{tx['amount']:,.2f}",
-        })
+    # SA1: get_recent_transactions wired here
+    transactions = get_recent_transactions(user_id)
 
-    cat_total = sum(r["total"] for r in cat_rows) or 1
-    categories = [
-        {
-            "name": r["category"],
-            "amount": f"₹{r['total']:,.2f}",
-            "percentage": round(r["total"] / cat_total * 100),
-        }
-        for r in cat_rows
-    ]
+    # SA3: get_category_breakdown wired here
+    categories = get_category_breakdown(user_id)
 
     return render_template(
         "profile.html",
