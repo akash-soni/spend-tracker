@@ -1,0 +1,29 @@
+{# templates/analytics.html #}
+{% extends "base.html" %}
+
+{% block title %}Analytics — Spendly{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/analytics.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="analytics-page">
+    <div class="coming-soon">
+        <div class="coming-soon-icon">
+            <div class="icon-circle">
+                <i data-lucide="bar-chart-2"></i>
+            </div>
+        </div>
+        <h1 class="coming-soon-title">Coming Soon</h1>
+        <p class="coming-soon-subtitle">Analytics</p>
+        <p class="coming-soon-notify">We'll notify you when it's ready</p>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>lucide.createIcons();</script>
+{% endblock %}
