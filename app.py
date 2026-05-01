@@ -1,7 +1,8 @@
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from database.db import get_db, init_db, seed_db, get_user_by_email, get_user_by_id
+from database.queries import get_summary_stats, get_recent_transactions, get_category_breakdown
 
 app = Flask(__name__)
 app.secret_key = "dev-secret-key-change-before-production"  # TODO: use env var in production
@@ -15,6 +16,35 @@ with app.app_context():
 def inject_current_user():
     user_id = session.get("user_id")
     return {"current_user": get_user_by_id(user_id) if user_id else None}
+
+
+# ------------------------------------------------------------------ #
+# Date-filter helpers                                                 #
+# ------------------------------------------------------------------ #
+
+def _parse_date(value):
+    try:
+        datetime.strptime(value, "%Y-%m-%d")
+        return value
+    except (ValueError, TypeError):
+        return None
+
+
+def _compute_presets():
+    today = date.today()
+    first_this = today.replace(day=1)
+    last_prev = first_this - timedelta(days=1)
+
+    m, y = today.month - 3, today.year
+    if m <= 0:
+        m, y = m + 12, y - 1
+
+    return {
+        "this_month":    (first_this.isoformat(), today.isoformat()),
+        "last_month":    (last_prev.replace(day=1).isoformat(), last_prev.isoformat()),
+        "last_3_months": (date(y, m, 1).isoformat(), today.isoformat()),
+        "all_time":      (None, None),
+    }
 
 
 # ------------------------------------------------------------------ #
@@ -107,80 +137,58 @@ def profile():
         return redirect(url_for("login"))
 
     user_id = session["user_id"]
-    conn = get_db()
 
-    user_row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-
-    total_spent = conn.execute(
-        "SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE user_id = ?",
-        (user_id,),
-    ).fetchone()[0]
-
-    tx_count = conn.execute(
-        "SELECT COUNT(*) FROM expenses WHERE user_id = ?",
-        (user_id,),
-    ).fetchone()[0]
-
-    top_cat_row = conn.execute(
-        "SELECT category FROM expenses WHERE user_id = ? GROUP BY category ORDER BY SUM(amount) DESC LIMIT 1",
-        (user_id,),
-    ).fetchone()
-
-    tx_rows = conn.execute(
-        "SELECT date, description, category, amount FROM expenses WHERE user_id = ? ORDER BY date DESC LIMIT 10",
-        (user_id,),
-    ).fetchall()
-
-    cat_rows = conn.execute(
-        "SELECT category, SUM(amount) AS total FROM expenses WHERE user_id = ? GROUP BY category ORDER BY total DESC",
-        (user_id,),
-    ).fetchall()
-
-    conn.close()
-
-    name = user_row["name"]
-    initials = "".join(w[0].upper() for w in name.split()[:2])
+    user_row = get_user_by_id(user_id)
+    display_name = user_row["name"]
+    initials = "".join(w[0].upper() for w in display_name.split()[:2])
     created_at = user_row["created_at"] or ""
     try:
-        member_since = datetime.strptime(created_at[:10], "%Y-%m-%d").strftime("%d %b %Y")
+        member_since = datetime.strptime(created_at[:10], "%Y-%m-%d").strftime("%B %Y")
     except ValueError:
         member_since = "—"
-
     user = {
-        "name": name,
+        "name": display_name,
         "email": user_row["email"],
         "member_since": member_since,
         "initials": initials,
     }
 
-    stats = {
-        "total_spent": f"₹{total_spent:,.2f}",
-        "transaction_count": tx_count,
-        "top_category": top_cat_row[0] if top_cat_row else "—",
-    }
+    start_date = _parse_date(request.args.get("start_date"))
+    end_date = _parse_date(request.args.get("end_date"))
 
-    transactions = []
-    for tx in tx_rows:
-        try:
-            date_fmt = datetime.strptime(tx["date"], "%Y-%m-%d").strftime("%d %b %Y")
-        except ValueError:
-            date_fmt = tx["date"]
-        transactions.append({
-            "date": date_fmt,
-            "description": tx["description"] or "—",
-            "category": tx["category"],
-            "amount": f"₹{tx['amount']:,.2f}",
-        })
+    presets = _compute_presets()
+    active_preset = "all_time"
+    if start_date is not None or end_date is not None:
+        active_preset = "custom"
+        for key, (ps, pe) in presets.items():
+            if key == "all_time":
+                continue
+            if start_date == ps and end_date == pe:
+                active_preset = key
+                break
 
-    cat_total = sum(r["total"] for r in cat_rows) or 1
-    categories = [
-        {
-            "name": r["category"],
-            "amount": f"₹{r['total']:,.2f}",
-            "percentage": round(r["total"] / cat_total * 100),
-        }
-        for r in cat_rows
-    ]
+    preset_urls = {}
+    for key, (ps, pe) in presets.items():
+        if ps is None:
+            preset_urls[key] = url_for("profile")
+        else:
+            preset_urls[key] = url_for("profile", start_date=ps, end_date=pe)
+
+    def _fmt(iso):
+        return datetime.strptime(iso, "%Y-%m-%d").strftime("%d %b %Y")
+
+    if start_date and end_date:
+        filter_label = f"{_fmt(start_date)} – {_fmt(end_date)}"
+    elif start_date:
+        filter_label = f"From {_fmt(start_date)}"
+    elif end_date:
+        filter_label = f"Up to {_fmt(end_date)}"
+    else:
+        filter_label = "All time"
+
+    stats = get_summary_stats(user_id, start_date, end_date)
+    transactions = get_recent_transactions(user_id, start_date=start_date, end_date=end_date)
+    categories = get_category_breakdown(user_id, start_date, end_date)
 
     return render_template(
         "profile.html",
@@ -188,6 +196,11 @@ def profile():
         stats=stats,
         transactions=transactions,
         categories=categories,
+        preset_urls=preset_urls,
+        active_preset=active_preset,
+        filter_label=filter_label,
+        start_date=start_date or "",
+        end_date=end_date or "",
     )
 
 
