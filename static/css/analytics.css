@@ -1,0 +1,54 @@
+/* ------------------------------------------------------------------ */
+/* Analytics Coming Soon Page                                          */
+/* ------------------------------------------------------------------ */
+
+.analytics-page {
+    min-height: calc(100vh - 60px - 100px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+}
+
+.coming-soon {
+    text-align: center;
+}
+
+.coming-soon-icon {
+    margin-bottom: 2rem;
+}
+
+.icon-circle {
+    width: 120px;
+    height: 120px;
+    border: 2px dashed #0d9488;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+.icon-circle i {
+    width: 48px;
+    height: 48px;
+    color: #0d9488;
+}
+
+.coming-soon-title {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 5vw, 3rem);
+    color: var(--ink);
+    margin-bottom: 0.5rem;
+}
+
+.coming-soon-subtitle {
+    font-size: 1.25rem;
+    color: var(--ink-muted);
+    margin-bottom: 2rem;
+}
+
+.coming-soon-notify {
+    font-size: 0.9rem;
+    color: var(--ink-faint);
+}

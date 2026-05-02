@@ -73,7 +73,12 @@
 
         <!-- Transaction history -->
         <section class="profile-section profile-transactions">
-            <h2 class="section-heading">Recent Transactions</h2>
+            <div class="section-header">
+                <h2 class="section-heading">Recent Transactions</h2>
+                <a href="{{ url_for('add_expense') }}" class="btn-add-expense">
+                    <i data-lucide="plus"></i> Add Expense
+                </a>
+            </div>
             <div class="tx-table-wrap">
                 <table class="tx-table">
                     <thead>

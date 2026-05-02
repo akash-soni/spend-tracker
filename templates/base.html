@@ -20,7 +20,9 @@
             </a>
             <div class="nav-links">
                 {% if current_user %}
-                <a href="{{ url_for('profile') }}" class="nav-profile">{{ current_user["name"] }}</a>
+                <a href="{{ url_for('profile') }}" class="nav-link{% if request.endpoint == 'profile' %} active{% endif %}">Profile</a>
+                <a href="{{ url_for('add_expense') }}" class="nav-link{% if request.endpoint == 'add_expense' %} active{% endif %}">Add Expense</a>
+                <a href="{{ url_for('analytics') }}" class="nav-link{% if request.endpoint == 'analytics' %} active{% endif %}">Analytics</a>
                 <a href="{{ url_for('logout') }}">Sign out</a>
                 {% else %}
                 <a href="{{ url_for('login') }}">Sign in</a>
