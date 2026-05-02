@@ -102,3 +102,17 @@ def get_category_breakdown(user_id, start_date=None, end_date=None):
         }
         for i, row in enumerate(rows)
     ]
+
+
+# ===== INSERT EXPENSE =====
+
+def insert_expense(user_id, amount, category, date, description):
+    conn = get_db()
+    try:
+        conn.execute(
+            "INSERT INTO expenses (user_id, amount, category, date, description) VALUES (?, ?, ?, ?, ?)",
+            (user_id, amount, category, date, description),
+        )
+        conn.commit()
+    finally:
+        conn.close()

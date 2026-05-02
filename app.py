@@ -2,7 +2,7 @@ from datetime import datetime, date, timedelta
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from database.db import get_db, init_db, seed_db, get_user_by_email, get_user_by_id
-from database.queries import get_summary_stats, get_recent_transactions, get_category_breakdown
+from database.queries import get_summary_stats, get_recent_transactions, get_category_breakdown, insert_expense
 
 app = Flask(__name__)
 app.secret_key = "dev-secret-key-change-before-production"  # TODO: use env var in production
@@ -211,9 +211,65 @@ def analytics():
     return render_template("analytics.html")
 
 
-@app.route("/expenses/add")
+@app.route("/expenses/add", methods=["GET", "POST"])
 def add_expense():
-    return "Add expense — coming in Step 7"
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    if request.method == "GET":
+        from datetime import date
+        return render_template("add_expense.html", default_date=date.today().isoformat(), values={}, error="")
+
+    # POST - validate and save
+    amount_str = request.form.get("amount", "").strip()
+    category = request.form.get("category", "").strip()
+    date_str = request.form.get("date", "").strip()
+    description = request.form.get("description", "").strip()
+
+    # Validate amount
+    try:
+        amount = float(amount_str)
+        if amount <= 0:
+            raise ValueError
+    except ValueError:
+        from datetime import date
+        return render_template(
+            "add_expense.html",
+            default_date=date.today().isoformat(),
+            error="Amount must be a positive number.",
+            values={"amount": amount_str, "category": category, "date": date_str, "description": description},
+        )
+
+    # Validate category
+    valid_categories = ["Food", "Transport", "Bills", "Health", "Entertainment", "Shopping", "Other"]
+    if category not in valid_categories:
+        from datetime import date
+        return render_template(
+            "add_expense.html",
+            default_date=date.today().isoformat(),
+            error="Please select a valid category.",
+            values={"amount": amount_str, "category": category, "date": date_str, "description": description},
+        )
+
+    # Validate date
+    try:
+        datetime.strptime(date_str, "%Y-%m-%d")
+    except ValueError:
+        from datetime import date
+        return render_template(
+            "add_expense.html",
+            default_date=date.today().isoformat(),
+            error="Please enter a valid date.",
+            values={"amount": amount_str, "category": category, "date": date_str, "description": description},
+        )
+
+    # Save expense
+    user_id = session["user_id"]
+    description = description if description else None
+    insert_expense(user_id, amount, category, date_str, description)
+
+    flash("Expense added successfully!", "success")
+    return redirect(url_for("profile"))
 
 
 @app.route("/expenses/<int:id>/edit")
